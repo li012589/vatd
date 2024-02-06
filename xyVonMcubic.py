@@ -66,8 +66,8 @@ clipGrad = 0.0
 lamd1 = 5.0
 
 # define computation device
-device = torch.device("cpu")
-#device = torch.device("cuda:1")
+#device = torch.device("cpu")
+device = torch.device("cuda:0")
 
 # create saving folder
 name = "cubic_vonMises_Multi_" + str(len(factorLst)) + "_"+"XY_J"+str(J) + "_T"+str(T0)+"_L"+str(L)+"_t_"+str(factorLst).replace(', ','_').replace('[','').replace(']','')
@@ -226,7 +226,7 @@ for e in range(maxIter):
     if e % saveStep == 0 or e == 0:
         # save joint and opt
         torch.save(joint, os.path.join(rootFolder, 'savings', joint.name + "_epoch_" + str(e) + ".saving"))
-        torch.save(optimizer, rootFolder + 'savings/' + joint.name + "_epoch_" + str(e) + "_opt.saving")
+        torch.save(optimizer, os.path.join(rootFolder, 'savings', joint.name + "_epoch_" + str(e) + "_opt.saving"))
         # save loss values
         with h5py.File(os.path.join(rootFolder, "records", "LOSS"+'.hdf5'), 'w') as f:
             f.create_dataset("LOSS", data=np.array(LOSS))
