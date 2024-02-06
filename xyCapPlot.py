@@ -51,15 +51,15 @@ def heatCapPlot(model, L, batchSize, target, smallBatchNum=1, betaMin=0.5, betaM
                 energyWithT = xy.energyWithT(samples, T=T)
                 logZ = -(logProb + energyWithT)
 
-                dlogP = torch.autograd.grad(logProb, beta, grad_outputs=torch.ones(smallBatch, 1).to(device), create_graph=True, retain_graph=True)[0]
-                dEdT = torch.autograd.grad(energyWithT, beta, grad_outputs=torch.ones(smallBatch, 1).to(device), create_graph=True, retain_graph=True)[0]
+                dlogP = torch.autograd.grad(logProb, _beta, grad_outputs=torch.ones(smallBatch, 1).to(device), create_graph=True, retain_graph=True)[0]
+                dEdT = torch.autograd.grad(energyWithT, _beta, grad_outputs=torch.ones(smallBatch, 1).to(device), create_graph=True, retain_graph=True)[0]
 
                 dlogZ = -dlogP - dEdT
 
                 if autodiffLevel == 0:
                     logQdivR = model.prior.sourceList[1].logAceptRej()
 
-                    dlogQdivR = torch.autograd.grad(logQdivR, beta, grad_outputs=torch.ones(smallBatch, 1).to(device), create_graph=True)[0]
+                    dlogQdivR = torch.autograd.grad(logQdivR, _beta, grad_outputs=torch.ones(smallBatch, 1).to(device), create_graph=True)[0]
 
                     with torch.no_grad():
                         B2 = (logZ * (dlogQdivR**2)).mean() / (dlogQdivR**2).mean()
@@ -71,7 +71,7 @@ def heatCapPlot(model, L, batchSize, target, smallBatchNum=1, betaMin=0.5, betaM
                         dlogPest = (dlogP + (logProb - B3) * dlogQdivR).mean()
 
                 if autodiffLevel == 1:
-                    dzlogProb = torch.autograd.grad(zlogProb, beta, grad_outputs=torch.ones(smallBatch, 1).to(device), create_graph=True, retain_graph=True)[0]
+                    dzlogProb = torch.autograd.grad(zlogProb, _beta, grad_outputs=torch.ones(smallBatch, 1).to(device), create_graph=True, retain_graph=True)[0]
 
                     with torch.no_grad():
                         B2 = (logZ * (dzlogProb**2)).mean() / (dzlogProb**2).mean()
@@ -87,7 +87,7 @@ def heatCapPlot(model, L, batchSize, target, smallBatchNum=1, betaMin=0.5, betaM
                 meanElst.append(meanE.item()/L**2)
 
                 dlogPlst.append(dlogP.mean().item()/L**2)
-                heatClst.append((beta[0] * dlogPest).item()/L**2)
+                heatClst.append((beta * dlogPest).item()/L**2)
 
             elif autodiff:
                 beta = beta.detach().requires_grad_(True).to(device)
@@ -163,7 +163,8 @@ def heatCapPlot(model, L, batchSize, target, smallBatchNum=1, betaMin=0.5, betaM
         np.save(f, lnZlst)
         np.save(f, meanElst)
         np.save(f, heatClst)
-        np.save(f, dlogPlst)
+        if autodiff or repAcptRej:
+            np.save(f, dlogPlst)
 
     plt.figure(figsize=(12, 9))
     plt.title('lnZ')
@@ -215,14 +216,14 @@ if __name__ == "__main__":
     #torch.manual_seed(42)
     # parameters for dists
     L = 16  # lattice length
-    num = 300 # plot points number
+    num = 30 # plot points number
     batchSize = 1000 # the batch size to estimate free energy
     smallBatchNum = 10 # num of runs to get the full batch
 
-    device = torch.device("cpu")
-    #device = torch.device("cuda:1")
+    #device = torch.device("cpu")
+    device = torch.device("cuda:0")
 
-    loadPath = "./opt/uniformSoftplusCNN_testcubic_vonMises_Multi_8_XY_J1.0_T1.0_L8_t_0.5_0.75_0.85_0.9_1.0_1.1_1.25_2.4/"
+    loadPath = "./opt/best/"
 
     model = torch.load(os.path.join(loadPath, "best_TrainLoss_joint.saving"), map_location=device)
 
@@ -252,4 +253,10 @@ if __name__ == "__main__":
     resultLst = tuple(resultLst)
     print(printString % resultLst)
 
-    heatCapPlot(model, L, batchSize, target, stepNum=num, show=True, savePath=os.path.join(loadPath, "pic"), autodiff=False, repAcptRej=True, autodiffLevel=1, device=device)
+    import pdb
+    pdb.set_trace()
+
+    # autodiff=True, repAcptRej=False, autodiffLevel=None --> vanilla autodiff, lost contribution from acceptance-reject sampling;
+    # autodiff=False, repAcptRej=True, autodiffLevel=0/1 --> reparamete at vonMise/prior level;
+    # autodiff=False, repAcptRej=False, autodiffLevel=None --> direct sampling and statistical estimation.
+    heatCapPlot(model, L, batchSize, target, smallBatchNum=smallBatchNum, stepNum=num, show=True, savePath=os.path.join(loadPath, "pic"), autodiff=False, repAcptRej=True, autodiffLevel=0, device=device)
