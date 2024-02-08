@@ -23,25 +23,25 @@ L = 16 # Lattice length
 T0 = 2.269 # scaling T0
 factorLst = [0.5, 0.8, 0.9, 1, 1.1, 1.2, 1.3, 1.8] # multiple factors for T0 to form factor points
 TList = [term * T0 for term in factorLst]
-TempStart, TempEnd, TempStep = 0.8, 10.8, 10
+TempStart, TempEnd, TempStep = 0.8, 10.8, 0.2
 TRange = torch.arange(TempStart, TempEnd, TempStep)
 betaRange = 1 / TRange
 dataSize = betaRange.shape[0]
-betaBatchSize = 1
+betaBatchSize = 10
 stepNum = dataSize // betaBatchSize
 
 # params for optimization
 lr = 1.e-3
 eps = 1.e-8
 lrdecay = 1000
-batchSize = 1
+batchSize = 800
 maxEpoch = 4600
-saveStep = 1
+saveStep = 20
 clipGrad = 1.0 #clip gradient to stablize, 0 for not using
 
 # define device
-# device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-device = torch.device('cpu')
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
 # create saving folder
 name = 'isingTraining'
 rootFolder = './opt/'+ name + '/'
@@ -135,7 +135,7 @@ for e in range(maxEpoch):
         # save model and opt
         torch.save({
             'Epoch': e,
-            'model_state_dict': model.state_dict(),
+            'model': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
             'scheduler_state_dict': scheduler.state_dict(),
             }, rootFolder + 'savings/' + model.name + "_epoch_" + str(e) + ".saving")
