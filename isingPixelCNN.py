@@ -10,21 +10,25 @@ from utils import isingLogz, isingLogzTr
 import source, utils
 import h5py, os, sys
 
-## subfunctions
+# subfunctions
 def mapping(batch):
     return batch * 2 - 1
 
 def reverseMapping(batch):
     return torch.div(batch + 1, 2, rounding_mode='trunc')
 
+# to fix the first spin
 fixFirst = 1
+
 # parameters for dists
 L = 16 # Lattice length
-T0 = 2.269 # scaling T0
+T0 = 2.269 # base t for Ising dist
 factorLst = [0.5, 0.8, 0.9, 1, 1.1, 1.2, 1.3, 1.8] # multiple factors for T0 to form factor points
 TList = [term * T0 for term in factorLst]
-TempStart, TempEnd, TempStep = 0.8, 10.8, 0.2
-TRange = torch.arange(TempStart, TempEnd, TempStep)
+
+# parameters for the beta range
+tempStart, tempEnd, tempStep = 0.8, 10.8, 0.2
+TRange = torch.arange(tempStart, tempEnd, tempStep)
 betaRange = 1 / TRange
 dataSize = betaRange.shape[0]
 betaBatchSize = 10
@@ -61,7 +65,7 @@ augmentChannels = 1
 maskedConv = MaskedResConv(channel, kernelSize, hiddenChannels, hiddenConvLayers, hiddenKernelSize, hiddenWidth, hiddenFcLayers, category, augmentChannels=augmentChannels).to(device)
 
 target = source.VanillaIsing(L=L, d=2, T=T0, breakSym=True).to(device)
-isingExactloss = [isingLogzTr(n = L, j=1.0, beta = (1/torch.tensor(T))).item() for T in TList]
+isingExactloss = [isingLogzTr(n=L, j=1.0, beta=(1/torch.tensor(T))).item() for T in TList]
 
 model = DiscretePixelCNN([L, L], channel, maskedConv, fixFirst=fixFirst, mapping=mapping, reverseMapping=reverseMapping, device=device, name=name)
 
@@ -72,7 +76,7 @@ print('total nubmer of trainable parameters:', nparams)
 
 # init optimizer
 optimizer = torch.optim.Adam(params, lr=lr)
-scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size = 500, gamma = 0.6)
+scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=500, gamma=0.6)
 
 # Training
 LOSS = []
@@ -93,11 +97,11 @@ for e in range(maxEpoch):
             lossReinforce = torch.mean((loss - loss.mean()) * logProb)
             lossReinforce.backward()
 
-        if clipGrad !=0:
+        if clipGrad != 0:
             nn.utils.clip_grad_norm_(params, clipGrad)
 
         optimizer.step()
-    trainTime =  time.time() - tstart
+    trainTime = time.time() - tstart
 
     # evaluation
     lossLst = []
@@ -122,10 +126,10 @@ for e in range(maxEpoch):
     printString = 'epoch: {:d}, L: {:.5f},'
     resultLst = [e, lossSum]
     for idx, factor in enumerate(factorLst):
-        printString += 'ising@' +  str(factor) + ':{:.5f},' + 'err:{:.2f},'
-        resultLst +=[lossLst[idx].item()/16/16/0.45, lossLst[idx].item() + isingExactloss[idx]]
+        printString += 'ising@' + str(factor) + ':{:.5f},' + 'err:{:.2f},'
+        resultLst += [lossLst[idx].item()/16/16/0.45, lossLst[idx].item() + isingExactloss[idx]]
 
-    printString +='time:{:.2f}'
+    printString += 'time:{:.2f}'
     resultLst += [trainTime]
     resultLst = tuple(resultLst)
     print(printString.format(*resultLst))
@@ -141,11 +145,11 @@ for e in range(maxEpoch):
             }, rootFolder + 'savings/' + model.name + "_epoch_" + str(e) + ".saving")
 
         # save loss values
-        with h5py.File(rootFolder + 'records/' + 'LOSS'  + '.hdf5', 'w') as f:
+        with h5py.File(rootFolder + 'records/' + 'LOSS' + '.hdf5', 'w') as f:
             f.create_dataset('LOSS', data=np.array(LOSS))
 
         # plot loss curve
-        lossfig = plt.figure(figsize=(12,5))
+        lossfig = plt.figure(figsize=(12, 5))
         lossax = lossfig.add_subplot(111)
         epoch = len(LOSS)
         lossax.plot(np.arange(epoch), np.array(LOSS), 'go-', label="loss", markersize=2.5)

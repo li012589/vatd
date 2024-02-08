@@ -158,7 +158,7 @@ def heatCapPlot(model, L, batchSize, target, smallBatchNum=1, betaMin=0.5, betaM
 
     betaLst = betaLst.cpu().numpy()
 
-    with open(os.path.join(savePath, "xyplotdatalite.npy"), "wb") as f:
+    with open(os.path.join(savePath, "xyplotdata.npy"), "wb") as f:
         np.save(f, betaLst)
         np.save(f, lnZlst)
         np.save(f, meanElst)

@@ -13,10 +13,7 @@ import source, utils, os, sys
 def exactCal(L, beta):
     beta = beta.clone().detach().requires_grad_(True)
     logZexact = utils.isingLogzTr(L, 1.0, beta)
-    edlogZ = torch.autograd.grad(logZexact, beta, create_graph=True, retain_graph=True)[0]
-    edlogZ2 = torch.autograd.grad(edlogZ, beta)[0]
-
-    return logZexact.detach().item(), edlogZ.detach().item(), edlogZ2.detach().item()
+    return logZexact.detach().item()
 
 
 def reinforce(model, beta, L, batchSize, device):
@@ -35,7 +32,7 @@ def reinforce(model, beta, L, batchSize, device):
         loss = logProb + energyWithT
         logZ = -(loss).mean().detach().item()
         partFnErr = loss.std().item()
-     
+
     dlogProb = torch.autograd.grad(logProb, beta, grad_outputs=torch.ones(
         batchSize, 1).to(device), create_graph=True, allow_unused=True, retain_graph=True)[0]
 
@@ -44,7 +41,7 @@ def reinforce(model, beta, L, batchSize, device):
     with torch.no_grad():
         meanEnergy = torch.mean((logProb + energyWithT + logZ)
                             * dlogProb + energy).detach().item()
-    
+
         heatest1der = torch.mean(logProb*dlogProb).detach().item()*beta.detach().mean().item()
 
         term1 = torch.mean((logProb + energyWithT + logZ)*(d2logProb + dlogProb**2)).detach().item()
@@ -54,9 +51,7 @@ def reinforce(model, beta, L, batchSize, device):
         term3 = torch.mean((energy - energy.mean()) * dlogProb).detach().item()
 
         heatCap = - beta.detach().mean().item()**2 * (term1 + term2 + 2*term3)
-    '''
-    another way to reduce the variance
-    '''
+
     with torch.no_grad():
         b1 = torch.mean((logProb + energyWithT)*dlogProb**2)/torch.mean(dlogProb**2)
         b2 = torch.mean((logProb + energyWithT)*(d2logProb + dlogProb**2)**2)/torch.mean((d2logProb + dlogProb**2)**2)
@@ -80,10 +75,8 @@ def heatCapPlot(model, L, batchSize, betaMin=0.3, betaMax=0.6, stepNum=100, save
         savePath = savePath + 'autodif_'
     else:
         savePath = savePath + 'sta_'
-        
+
     exactlnZlst = []
-    exactMeanElst = []
-    exactHeatClst = []
 
     lnZlst = []
     heatClst = []
@@ -94,14 +87,12 @@ def heatCapPlot(model, L, batchSize, betaMin=0.3, betaMax=0.6, stepNum=100, save
     magLst = []
     mag2Lst = []
     partFnErrLst = []
-    
+
     for beta in betaLst:
 
         beta = beta.clone().detach()
-        logZexact, edlogZ, edlogZ2 = exactCal(L, beta)
+        logZexact = exactCal(L, beta)
         exactlnZlst.append(logZexact/L**2)
-        exactMeanElst.append(-edlogZ/L**2)
-        exactHeatClst.append((edlogZ2*(beta**2)).item()/L**2)
 
         if autodiff:
             lnZLoopLst = []
@@ -160,7 +151,7 @@ def heatCapPlot(model, L, batchSize, betaMin=0.3, betaMax=0.6, stepNum=100, save
             lnZlst.append(logZLoop/L**2)
             meanElst.append(meanE)
             heatClst.append(Cv)
-         
+
         error = abs(logZexact - logZ)
         if autodiff:
             print("beta:", beta.mean().item(), "meanE:",
@@ -174,16 +165,11 @@ def heatCapPlot(model, L, batchSize, betaMin=0.3, betaMax=0.6, stepNum=100, save
     heatClst = np.array(heatClst)
 
     exactlnZlst = np.array(exactlnZlst)
-    exactMeanElst = np.array(exactMeanElst)
-    exactHeatClst = np.array(exactHeatClst)
 
     betaLst = betaLst.cpu().numpy()
 
-    with open(savePath + "plotdata.npy", "wb") as f:
+    with open(savePath + "isingplotdata.npy", "wb") as f:
         np.save(f, betaLst)
-        np.save(f, exactlnZlst)
-        np.save(f, exactMeanElst)
-        np.save(f, exactHeatClst)
         np.save(f, lnZlst)
         np.save(f, meanElst)
         np.save(f, heatClst)
@@ -203,25 +189,23 @@ def heatCapPlot(model, L, batchSize, betaMin=0.3, betaMax=0.6, stepNum=100, save
     plt.scatter(betaLst, lnZlst, marker='o', label="est.")
     plt.scatter(betaLst, exactlnZlst, marker='+', label="exact")
     plt.legend(loc='best')
-    plt.savefig(savePath + 'lnZcompare.pdf')
+    plt.savefig(savePath + 'isinglnZ.pdf')
 
     plt.figure(figsize=(12, 9))
     plt.title('Mean Energy')
     plt.xlabel('beta')
     plt.ylabel('Mean Energy')
     plt.scatter(betaLst, meanElst, marker='o', label="est.")
-    plt.scatter(betaLst, exactMeanElst, marker='+', label="exact")
     plt.legend(loc='best')
-    plt.savefig(savePath + 'meanEcompare.pdf')
+    plt.savefig(savePath + 'isingmeanE.pdf')
 
     plt.figure(figsize=(12, 9))
     plt.title('Heat Capacity')
     plt.xlabel('beta')
     plt.ylabel('Heat Capacity')
     plt.scatter(betaLst, heatClst, marker='o', label="est.")
-    plt.scatter(betaLst, exactHeatClst, marker='+', label="exact")
     plt.legend(loc='best')
-    plt.savefig(savePath + 'heatCcompare.pdf')
+    plt.savefig(savePath + 'isingheatC.pdf')
 
     if show:
         plt.show()
@@ -244,14 +228,14 @@ if __name__ == "__main__":
         return torch.div(batch + 1, 2, rounding_mode='trunc')
 
     loadPath = 'opt/isingTraining/'
-    model = torch.load( loadPath+"best_TrainLoss_model.saving", map_location=device).to(device)
+    model = torch.load(loadPath+"best_TrainLoss_model.saving", map_location=device).to(device)
 
     # evaluation
     T0 =2.269 # scaling T0
     factorLst = [0.5, 0.8, 0.9, 1, 1.1, 1.2, 1.3, 1.8] # multiple factors for T0 to form factor points
     TList = [term * T0 for term in factorLst]
     target = source.VanillaIsing(L=L, d=2, T=T0, breakSym=True).to(device)
-    isingExactloss = [isingLogzTr(n = L, j=1.0, beta = (1/torch.tensor(T))).item() for T in TList]
+    isingExactloss = [isingLogzTr(n=L, j=1.0, beta=(1/torch.tensor(T))).item() for T in TList]
     lossLst = []
     for T in TList:
         T = torch.tensor(T).to(device)
@@ -267,13 +251,10 @@ if __name__ == "__main__":
     resultLst = [lossSum]
     for idx, factor in enumerate(factorLst):
         printString += 'ising@' +  str(factor) + ':{:.5f},' + 'err:{:.2f},'
-        resultLst +=[lossLst[idx].item()/16/16/0.45, lossLst[idx].item() + isingExactloss[idx]]
+        resultLst += [lossLst[idx].item()/16/16/0.45, lossLst[idx].item() + isingExactloss[idx]]
 
     resultLst = tuple(resultLst)
     print(printString.format(*resultLst))
 
     heatCapPlot(model, L, batchSize, betaMin=betaMin, betaMax=betaMax, stepNum=num,
                 show=False, savePath=loadPath+"pic/", device=device, autodiff=True, loop=loop)
-    
-    heatCapPlot(model, L, batchSize, betaMin=betaMin, betaMax=betaMax, stepNum=num,
-                show=False, savePath=loadPath+"pic/", device=device, autodiff=False, loop=loop)
