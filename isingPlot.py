@@ -72,9 +72,9 @@ def heatCapPlot(model, L, batchSize, betaMin=0.3, betaMax=0.6, stepNum=100, save
     if not os.path.exists(savePath):
         os.makedirs(savePath)
     if autodiff is True:
-        savePath = savePath + 'autodif_'
+        savePath = savePath + 'autodiff_'
     else:
-        savePath = savePath + 'sta_'
+        savePath = savePath + 'stat_'
 
     exactlnZlst = []
 
@@ -215,11 +215,12 @@ if __name__ == "__main__":
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     # parameters for dists
     L = 16  # lattice length
-    num = 500  # plot points number
-    batchSize = 700 # the batch size to estimate free energy
+    num = 30  # plot points number
+    batchSize = 2000 # the batch size to estimate free energy
     betaMin = 0.1
     betaMax = 1.0
     loop = 10
+
     # subfunctions
     def mapping(batch):
         return batch * 2 - 1
