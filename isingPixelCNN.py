@@ -27,18 +27,16 @@ factorLst = [0.5, 0.8, 0.9, 1, 1.1, 1.2, 1.3, 1.8] # multiple factors for T0 to 
 TList = [term * T0 for term in factorLst]
 
 # parameters for the beta range
-tempStart, tempEnd, tempStep = 0.8, 10.8, 0.2
-TRange = torch.arange(tempStart, tempEnd, tempStep)
-betaRange = 1 / TRange
+betaStart, betaEnd, betaStep = 0.05, 1.2, 0.01
+betaRange = torch.arange(betaStart, betaEnd, betaStep)
 dataSize = betaRange.shape[0]
-betaBatchSize = 10
+betaBatchSize = 6
 stepNum = dataSize // betaBatchSize
 
 # params for optimization
-lr = 1.e-3
+lr =5.e-4
 eps = 1.e-8
-lrdecay = 1000
-batchSize = 800
+batchSize = 500
 maxEpoch = 4600
 saveStep = 20
 clipGrad = 1.0 #clip gradient to stablize, 0 for not using
@@ -53,10 +51,10 @@ utils.createWorkSpace(rootFolder)
 
 # params for Discrete Pixel CNN
 channel = 1
-kernelSize = 9
+kernelSize = 13
 hiddenChannels = 64
 hiddenConvLayers = 6
-hiddenKernelSize = 9
+hiddenKernelSize = 13
 hiddenWidth = 64
 hiddenFcLayers = 2
 category = 2
@@ -76,7 +74,7 @@ print('total nubmer of trainable parameters:', nparams)
 
 # init optimizer
 optimizer = torch.optim.Adam(params, lr=lr)
-scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=500, gamma=0.6)
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.92, patience=70, threshold=1e-4, min_lr=1e-6)
 
 # Training
 LOSS = []
@@ -112,9 +110,9 @@ for e in range(maxEpoch):
             logProb = model.logProbability(samples, T=T)
             loss = (logProb + target.energyWithT(samples, T=T))
         lossLst.append(loss.mean().detach().item())
-    scheduler.step()
     lossLst = np.array(lossLst)
     lossSum = lossLst.sum()
+    scheduler.step(lossSum)
 
     # opt steps
     LOSS.append(lossSum)
