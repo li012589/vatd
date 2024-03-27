@@ -171,7 +171,7 @@ for e in range(maxIter):
             elif autodiffLevel is None:
                 gCorr = 0
             lossReinforce = loss + gCorr
-            lossReinforce = loss.mean(0, keepdim=True)
+            lossReinforce = lossReinforce.mean(0, keepdim=True)
 
             lossReinforce.backward()
 
