@@ -1,8 +1,9 @@
-# Variational Temperature-continuous (VaTC) Optimization
-Pytorch implement of paper *"Estimation of Temperature-continuous Statistical Mechanics Using Variational Boltzmann Distribution Optimization"*. [arXiv link](https://arxiv.org/abs/tbd)
+# Variational Temperature-differential (VaTD) Model Optimization
+Pytorch implement of paper *"Deep generative modelling of the canonical ensemble with differentiable thermal properties"*. [arXiv link](https://arxiv.org/abs/2404.18404)
 
 ## Abstract
-We propose a general framework to estimate the thermal-related transition behaviors of a finite statistical system, both microscopically and macroscopically. We utilize deep-learning explicit density generative models to model the distribution of the systems. Along with the microscopic states, the temperature is also used to estimate the probability. When optimized with the reverse Kullback-Leibler divergence, at the optimal point, this learned distribution can be proved to be a temperature-continuous Boltzmann distribution. This training requires no dataset, only the energy function. Besides being a direct sampler of the microscopic states, the learned model gives temperature-continuous estimations of the system’s macroscopic properties, e.g., the partition function. With the help of automatic differentiation, these continuous estimations can be differentiated in a way similar to what one can do with an analytical solution. To show the generality of the proposed method, we demonstrate this framework on the phase transition of the Ising model (discrete-variable model with PixelCNN) and XY model (continuous-variable model with Normalizing flow). 
+
+It is a long-standing challenge to accurately and efficiently compute thermodynamic quantities of condensed-matter many-body systems at thermal equilibrium. The conventional methods, e.g., Markov chain Monte Carlo (MCMC) method, require lots of steps to equilibrate. The recently developed deep learning methods can directly sample independent equilibrium samples, but have to train separate models for each temperature point, essentially breaking continuous thermal effects, so they are often inadequate for directly representing physical ensembles, particularly during phase transitions (PTs). Here, we propose a variational modelling method for canonical ensembles with differentiable temperature, which gives accurate thermodynamic quantities as continuous functions of temperature akin to an analytical solution. Using a deep generative model, the free energy is estimated and minimized in a continuous temperature range. At optimal, this generative model is directly a Boltzmann distribution with temperature dependence. This training requires no dataset, and works with arbitrary explicit density generative models. We applied our method to study the PTs in the Ising and XY models, and showed that our direct-sampling simulations are as accurate as the MCMC simulation, but more efficient. Moreover, the differentiable free energy from our method aligns closely with the exact one to the second-order derivative, indicating that incorporating temperature dependence enables the otherwise biased variational model to capture the subtle thermal effects at the PTs. The functional dependence on external parameters along with the exceptional fitting ability of deep learning models sheds light on the direct simulation of physical systems.
 
 ## For results of 2D XY model
 
@@ -27,3 +28,18 @@ Plotting,
 ```bash
 python isingPlot.py
 ```
+
+## Citation
+
+Please consider cite our work,
+```
+@article{li2024deep,
+      title={Deep generative modelling of canonical ensemble with differentiable thermal properties}, 
+      author={Shuo-Hui Li and Yao-Wen Zhang and Ding Pan},
+      year={2024},
+      eprint={2404.18404},
+      archivePrefix={arXiv},
+      primaryClass={cond-mat.stat-mech}
+}
+```
+
